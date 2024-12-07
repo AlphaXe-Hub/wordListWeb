@@ -34,7 +34,7 @@
 
     <label>
         显示时间间隔（秒）：
-        <input type="number" id="interval" value="60" min="1">
+        <input type="number" id="interval" value="10" min="1">
     </label>
 
     <button id="start">开始</button>
@@ -48,7 +48,7 @@
         // 从word.txt读取单词
         async function fetchWords() {
             try {
-                const response = await fetch('./word.txt');
+                const response = await fetch('word.txt');
                 const text = await response.text();
                 words = text.split('\n').filter(line => line.trim() !== '');
             } catch (error) {
