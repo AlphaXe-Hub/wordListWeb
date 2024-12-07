@@ -1,14 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Notification Control</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词背诵工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        input, select {
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Notification Control</h1>
-    <button id="notifyBtn">Send Notification</button>
+    <h1>单词背诵工具</h1>
 
-    <script src="script.js"></script>
+    <label>
+        单选模式：
+        <input type="radio" name="order" value="random" checked> 乱序
+        <input type="radio" name="order" value="sequential"> 正序
+    </label>
+
+    <label>
+        显示时间间隔（秒）：
+        <input type="number" id="interval" value="60" min="1">
+    </label>
+
+    <button id="start">开始</button>
+    <button id="stop" disabled>结束</button>
+
+    <script>
+        let intervalId; // 保存定时器ID
+        let words = []; // 存储从文件中读取的单词
+        let currentIndex = 0; // 当前正序的索引
+
+        // 从word.txt读取单词
+        async function fetchWords() {
+            try {
+                const response = await fetch('word.txt');
+                const text = await response.text();
+                words = text.split('\n').filter(line => line.trim() !== '');
+            } catch (error) {
+                console.error('读取单词文件失败:', error);
+                alert('无法读取 word.txt 文件，请确保文件存在并格式正确。');
+            }
+        }
+
+        // 显示通知
+        function showNotification(title, body) {
+            if (Notification.permission === "granted") {
+                new Notification(title, { body });
+            } else {
+                alert(`通知内容:\n${title}\n${body}`);
+            }
+        }
+
+        // 开始背单词
+        function startWords() {
+            const intervalInput = document.getElementById('interval');
+            const order = document.querySelector('input[name="order"]:checked').value;
+            const interval = parseInt(intervalInput.value) * 1000;
+
+            if (isNaN(interval) || interval <= 0) {
+                alert('请输入一个有效的秒数！');
+                return;
+            }
+
+            document.title = "正在背单词...";
+            document.getElementById('start').disabled = true;
+            document.getElementById('stop').disabled = false;
+
+            if (order === 'random') {
+                intervalId = setInterval(() => {
+                    const randomIndex = Math.floor(Math.random() * words.length);
+                    const [word, phonetic, meaning] = words[randomIndex].split('%');
+                    showNotification(word, `${phonetic}\n${meaning}`);
+                }, interval);
+            } else {
+                currentIndex = 0;
+                intervalId = setInterval(() => {
+                    if (currentIndex >= words.length) currentIndex = 0;
+                    const [word, phonetic, meaning] = words[currentIndex].split('%');
+                    showNotification(word, `${phonetic}\n${meaning}`);
+                    currentIndex++;
+                }, interval);
+            }
+        }
+
+        // 停止背单词
+        function stopWords() {
+            clearInterval(intervalId);
+            document.title = "单词背诵工具";
+            document.getElementById('start').disabled = false;
+            document.getElementById('stop').disabled = true;
+        }
+
+        // 页面加载时申请通知权限并加载单词
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (Notification.permission !== "granted") {
+                await Notification.requestPermission();
+            }
+            await fetchWords();
+
+            document.getElementById('start').addEventListener('click', startWords);
+            document.getElementById('stop').addEventListener('click', stopWords);
+        });
+    </script>
 </body>
 </html>
